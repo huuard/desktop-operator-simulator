@@ -110,9 +110,21 @@ npm run test:spike:m0:notepad-mouse
 UIA 结构报告：
 
 ```powershell
-$env:WECHAT_PROCESS_NAME = "WeChat.exe"
+$env:WECHAT_PROCESS_NAME = "Weixin.exe"   # 微信 3.x 用 "WeChat.exe"
 npm run test:spike:m0:wechat-inspect
 ```
+
+取证完成后，用上面的 `AutomationId`（或 `ClassName` + 序号）配置会话标题定位器，
+再运行收发 Spike。它要求操作者预先打开测试会话，且只有显式确认才会注入输入：
+
+```powershell
+$env:WECHAT_EXPECTED_CONVERSATION = "专用测试会话名"
+$env:WECHAT_SPIKE_TITLE_AUTOMATION_ID = "取证得到的标题 AutomationId"
+$env:WECHAT_SPIKE_CONFIRM = "1"   # 缺少此变量时拒绝运行
+npm run test:spike:m0:wechat-send
+```
+
+每轮发送唯一探测文本并读回验证；报告只保存会话名的哈希与长度，探测文本不落盘。
 
 管理台桌面和移动视口检查使用脱敏的本地 AI 与商品 API fixture：
 

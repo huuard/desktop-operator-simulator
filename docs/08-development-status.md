@@ -1,6 +1,6 @@
 # 开发状态
 
-最后更新：2026-10-04
+最后更新：2026-11-17
 
 本文记录仓库当前已实现和未实现的事实状态。实施顺序与验收标准仍以
 [`04-implementation-plan.md`](04-implementation-plan.md) 和
@@ -18,7 +18,8 @@
 - 当前阶段：**M5 答辩准备的跨平台可开发部分完成（管理台补全、统计、离线夹具、
   交付文档），pywinauto Desktop Agent 迁移分支已合并进 main、代码层完成并通过 Windows
   质量门与 CI；M0 记事本基础操作已取得 20 轮 20/20 实机证据、鼠标动作已取得 20 轮 19/20
-  实机证据，微信与浏览器真实环境项仍未验证**。
+  实机证据，微信发送与已发送消息读回已取得 20 轮 20/20 实机证据；微信接收、AI 页面与
+  购物站点仍未验证**。
 - 当前可运行能力：Control Server、SQLite、Agent WebSocket 和 .NET Desktop Agent
   占位进程可联合运行；Fake AI、商品和聊天适配器可完成消息到回复的模拟闭环；Vue
   管理台提供任务监控、执行节点、统计看板三视图，可取消、可手动恢复中断/失败
@@ -32,14 +33,17 @@
   `MOUSE_CLICK_POSITION` 窗口相对坐标兜底且默认关闭）已完成契约、协议模型、执行器、
   pywinauto 后端、按键跟踪释放、Fake/模拟编辑器测试，并已在目标机取得
   **20 轮 19/20（95%）实机证据**（失败 1 轮为前台复核 fail-closed，未注入任何输入）；
-  微信 UIA Adapter 仍未实机校准。
+  微信发送侧已按微信 4.x 控件树校准（`chat_input_field`、`current_chat_name_label`），
+  并取得 **20 轮 20/20 发送 + 读回实机证据**；微信接收侧仍未实机校准。
   微信接收基础层已实现 HMAC 隐私标识、稳定指纹、内存去重和 WebSocket 上报循环，
   并提供不保存明文 Name/窗口标题的只读 UIA 控件树取证命令。
 - 微信 UIA 读取来源 `wechat_source.py`（`WeChatUiAMessageSource` + 纯函数
   `extract_conversation`：可见文本抽取、50 条上限、空标题回退到窗口标题）、剪贴板粘贴发送
   `windows_backend.send_chat_text` 与 `windows_executor` 的 `WECHAT_SEND_TEXT`（含前台复核、
-  策略白名单 `wechat_process_name`）现已实现，并通过 mock 控件树/fake 后端单测；真实微信控件
-  定位尚未实机校准。
+  策略白名单 `wechat_process_name`）现已实现，并通过 mock 控件树/fake 后端单测。发送侧已在
+  微信 4.x 实机校准：优先按 `chat_input_field` 定位、验证键盘焦点、验证粘贴结果后才回车；
+  20 轮 20/20 发送 + 读回通过。接收侧的 `extract_conversation` 仍按通用启发式抽取，
+  尚未用真实控件树校准。
 - 控制服务器新增 `AgentGateway.requestDesktopCommand`（发送 + 等待 `desktop.command.result` +
   超时）、桌面 Agent 在线选择 `pickWeChatSendAgent`，以及真实 `DesktopAgentChatReplyAdapter`
   （fail-closed、无 `wechat.send` 代理即不可用），仅当 `enableDesktopChatReply` 显式启用；该
@@ -50,9 +54,10 @@
 - 当前统计与演示能力：成功率/耗时分位/错误分布报表端点与看板（含夹具声明）；
   断网可用的离线测试夹具页（六场景，明确标注“测试夹具”）；安装手册、用户手册、
   设计说明和答辩演示脚本齐备。
-- 当前不可运行能力：真实微信收发、真实 AI 页面问答和商品搜索。Windows 基础输入/
-  剪贴板/截图已在记事本上取得 20/20 实机证据，但尚未在微信或其它真实业务窗口上验证；
-  鼠标动作已通过 Fake 与模拟编辑器验证，目标机 20 轮实机证据仍缺失。
+- 当前不可运行能力：真实微信**接收**与双端闭环、真实 AI 页面问答和商品搜索。微信发送
+  与已发送消息读回已于 2026-11-17 取得 20/20 实机证据（文件传输助手），但“他人发来消息
+  → 读取 → 去重 → 回复”的完整接收链路尚未验证；Windows 基础输入/剪贴板/截图已在记事本
+  取得 20/20、鼠标 19/20 实机证据。
 - 当前验收范围：Node/.NET 单元与契约测试、临时 SQLite、跨进程注册、心跳、服务
   重启重连、紧急停止，以及 M2/M3 策略、去重、固定工作流、失败/取消和各 20 次
   Fake 闭环已通过模拟集成验证；M4 超时、重试、恢复、脱敏和清理路径已通过单元与
@@ -281,7 +286,15 @@
   单轮 1.6–11.6 s（均值 2.2 s）、20 张截图尺寸恒为 913×583；报告不含测试文本。
   已由操作者人工目视复核截图与最终桌面状态，均符合 `docs/07` §12 的复核项。
   该项属于 M0 三条 PoC 路径中的"Windows 基础操作"一条。
-- [ ] 微信 UIA 收发连续测试（Spike B，M0 退出标准中必须通过的一项）。
+- [x] 微信 UIA 发送与已发送消息读回 20 轮实机验证：**20/20（100%）通过**（2026-11-17，
+  微信 4.x `Weixin.exe`、Windows 11 build 26200、2560×1600、DPI 144、Python 3.11.18、
+  pywinauto 0.6.9）。报告
+  `C:\automation-data\artifacts\reports\wechat-spike-20261117-132448514655.json`：
+  `error_counts = {}`、单轮 369–410 ms（均值 386.8 ms）、每轮 `observed_matches = 1`。
+  本项证明“定位会话标题 → 定位并聚焦 `chat_input_field` → 粘贴 → 读回消息区”链路可用；
+  操作者目视复核消息条数尚未补记。发送侧通过不等同于接收侧通过。
+- [ ] 微信接收他人消息、`extract_conversation` 真实控件校准与去重（M2 ingress）：
+  仍需第二个账号或手机端发消息，验证“读取 → 去重 → 回复”完整链路。
 - [x] 记事本鼠标 Spike A2（20 轮）实机执行：**19/20（95%）通过**，1 次失败为前台复核
   fail-closed（未注入输入）；报告与逐轮诊断见"Python Desktop Agent 迁移"小节。
   第二次独立 20 轮重复仍待执行。
@@ -306,11 +319,15 @@
 
 - [ ] Windows 微信 UIA 新消息读取 Adapter。
   （代码已实现：`wechat_source.py` 的 `WeChatUiAMessageSource` 与 `extract_conversation`，
-  仅经 mock 控件树单测，真实控件定位待校准。）
+  仅经 mock 控件树单测。标题控件已取证为 `current_chat_name_label`，消息区为
+  `chat_message_list`；`extract_conversation` 的扁平启发式尚未按真实控件树校准。）
 - [ ] 目标 AI 页面 Playwright Adapter。
 - [ ] Windows 微信 UIA 文本回复 Adapter。
   （代码已实现：Node `desktop-agent-chat-reply-adapter.ts` 经 `AgentGateway.requestDesktopCommand`
-  发送 `WECHAT_SEND_TEXT` 并等待结果，仅经 mock Agent 单测，未接真实桌面 Agent。）
+  发送 `WECHAT_SEND_TEXT` 并等待结果，仅经 mock Agent 单测，未接真实桌面 Agent。
+  Python 发送路径已按微信 4.x 取证结果改用 `chat_input_field`，并在回车前验证键盘焦点与
+  粘贴结果（失败关闭），已通过 20/20 发送 + 读回实机 Spike；Node 到真实桌面 Agent 的
+  接线仍未验证。）
 - [ ] 登录失效后的人工恢复与继续执行。
 - [ ] 目标 Windows、微信和 AI 页面标准问答连续 20 次成功率验证。
 
@@ -340,13 +357,14 @@
 
 ## 当前限制
 
-- 目标 Windows 环境已提供记事本基础操作的验证记录（2026-10-04，20 轮 20/20）与鼠标动作的
-  验证记录（2026-10-04，20 轮 19/20，唯一失败为前台复核 fail-closed），
-  但尚无微信、AI 页面与购物站点的验证记录；鼠标也仅有这一次 20 轮，缺第二次重复。
+- 目标 Windows 环境已提供记事本基础操作（2026-10-04，20 轮 20/20）、鼠标动作
+  （2026-10-04，20 轮 19/20，唯一失败为前台复核 fail-closed）与微信发送 + 读回
+  （2026-11-17，20 轮 20/20）的验证记录；尚无微信**接收**、AI 页面与购物站点的验证
+  记录；鼠标也仅有这一次 20 轮，缺第二次重复。
 - 微信、目标 AI 页面和购物站点尚未冻结具体版本或对象。
 - 当前 C# Desktop Agent 使用占位执行器；Python 已实现默认关闭的 Windows 基础
-  执行器，并已通过记事本 20/20 实机验证，但尚未在微信等真实业务应用上校准定位，
-  因此仍不声明可用于微信操作。
+  执行器，并已通过记事本 20/20 与微信发送 20/20 实机验证；微信接收侧尚未校准，
+  因此仍不声明完整微信收发可用。
 - C# Desktop Agent 按 ADR-008 冻结保留：不删除、不发展，实现方向只在
   `apps/desktop-agent-python`；其覆盖由 CI 的 `dotnet` job 与 `npm run check:all` 承担，
   日常 `npm run check` 不依赖 .NET SDK。
